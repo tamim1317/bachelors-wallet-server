@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 
 const memberSchema = new mongoose.Schema({
+  messId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Mess',
+    default: null
+  },
   name: {
     type: String,
     required: [true, 'নাম দেওয়া আবশ্যক'],

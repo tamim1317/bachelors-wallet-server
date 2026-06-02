@@ -16,6 +16,7 @@ app.use('/api/expenses', require('./routes/expenseRoutes'));
 app.use('/api/bills', require('./routes/billRoutes'));
 app.use('/api/income', require('./routes/incomeRoutes'));
 app.use('/api/settlement', require('./routes/settlementRoutes'));
+app.use('/api/mess', require('./routes/messRoutes'));
 
 // Health check
 app.get('/', (req, res) => {
