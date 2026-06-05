@@ -20,6 +20,7 @@ app.use('/api/mess', require('./routes/messRoutes'));
 app.use('/api/budget', require('./routes/budgetRoutes'));
 app.use('/api/notices', require('./routes/noticeRoutes'));
 app.use('/api/rooms', require('./routes/roomRoutes'));
+app.use('/api/prediction', require('./routes/predictionRoutes'));
 
 // Health check
 app.get('/', (req, res) => {
