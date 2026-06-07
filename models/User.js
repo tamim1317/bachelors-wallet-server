@@ -16,9 +16,14 @@ const userSchema = new mongoose.Schema({
     ref: 'Member',
     default: null
   },
-  avatar: { type: String, default: '' },
+  avatar:   { type: String, default: '' },
   isActive: { type: Boolean, default: true },
-  lastSeen: { type: Date, default: Date.now }
+  lastSeen: { type: Date, default: Date.now },
+
+  // Password reset এর জন্য
+  securityQuestion: { type: String, default: '' },
+  securityAnswer:   { type: String, default: '' },
+
 }, { timestamps: true });
 
 // Password hash করো save করার আগে
