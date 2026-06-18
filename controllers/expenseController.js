@@ -30,6 +30,16 @@ exports.getExpenses = async (req, res) => {
 exports.createExpense = async (req, res) => {
   try {
     const expense = await Expense.create(req.body);
+
+    // 🔴 Real-time broadcast
+    if (global.io) {
+      global.io.emit('expense:created', {
+        type:     expense.type,
+        amount:   expense.amount,
+        category: expense.category,
+      });
+    }
+
     res.status(201).json({ success: true, data: expense });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });

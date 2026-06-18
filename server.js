@@ -84,3 +84,41 @@ mongoose.connect(process.env.MONGODB_URI)
     });
   })
   .catch(err => console.error('❌ MongoDB error:', err));
+
+  // Global io access
+global.io = io;
+
+io.on('connection', (socket) => {
+  console.log('🔌 Connected:', socket.id);
+
+  socket.on('user:join', (userData) => {
+    onlineUsers.set(socket.id, userData);
+    io.emit('users:online', Array.from(onlineUsers.values()));
+    socket.broadcast.emit('chat:system', {
+      content: `${userData.name} online হয়েছে`,
+      type: 'system',
+      createdAt: new Date()
+    });
+  });
+
+  socket.on('chat:message', (message) => {
+    io.emit('chat:message', message);
+  });
+
+  socket.on('chat:typing', (data) => {
+    socket.broadcast.emit('chat:typing', data);
+  });
+
+  socket.on('disconnect', () => {
+    const user = onlineUsers.get(socket.id);
+    if (user) {
+      onlineUsers.delete(socket.id);
+      io.emit('users:online', Array.from(onlineUsers.values()));
+      socket.broadcast.emit('chat:system', {
+        content: `${user.name} offline হয়েছে`,
+        type: 'system',
+        createdAt: new Date()
+      });
+    }
+  });
+});

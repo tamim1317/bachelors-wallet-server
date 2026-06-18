@@ -32,6 +32,15 @@ exports.upsertMeal = async (req, res) => {
       { breakfast, lunch, dinner, guestMeals },
       { upsert: true, new: true }
     );
+
+    // 🔴 Real-time broadcast
+    if (global.io) {
+      global.io.emit('meal:updated', {
+        memberId, date,
+        breakfast, lunch, dinner, guestMeals
+      });
+    }
+
     res.json({ success: true, data: meal });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
