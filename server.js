@@ -30,6 +30,7 @@ app.use('/api/mess',       require('./routes/messRoutes'));
 app.use('/api/prediction', require('./routes/predictionRoutes'));
 app.use('/api/settings',   require('./routes/settingsRoutes'));
 app.use('/api/chat',       require('./routes/chatRoutes'));
+app.use('/api/invite', require('./routes/inviteRoutes'));
 
 app.get('/', (req, res) => res.json({ message: '🎓 Bachelor Wallet API Running!' }));
 
