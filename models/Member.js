@@ -30,4 +30,7 @@ const memberSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
+memberSchema.index({ name: 1 });
+memberSchema.index({ phone: 1 });
+
 module.exports = mongoose.model('Member', memberSchema);

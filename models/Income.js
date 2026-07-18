@@ -15,5 +15,7 @@ const incomeSchema = new mongoose.Schema({
   note: { type: String, trim: true },
   date: { type: Date, default: Date.now }
 }, { timestamps: true });
+incomeSchema.index({ month: 1 });
+incomeSchema.index({ date: -1 });
 
 module.exports = mongoose.model('Income', incomeSchema);

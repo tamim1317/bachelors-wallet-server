@@ -18,5 +18,7 @@ const mealSchema = new mongoose.Schema({
 
 // একজন member-এর একটি দিনে একটাই entry থাকবে
 mealSchema.index({ memberId: 1, date: 1 }, { unique: true });
+mealSchema.index({ memberId: 1, date: -1 });
+mealSchema.index({ date: -1 });
 
 module.exports = mongoose.model('Meal', mealSchema);

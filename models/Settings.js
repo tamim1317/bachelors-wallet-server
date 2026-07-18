@@ -26,6 +26,25 @@ const settingsSchema = new mongoose.Schema({
   mealReminderTime: { type: String, default: '21:00' },
   reminderEnabled:  { type: Boolean, default: true },
 
+  mealWindows: {
+  breakfast: {
+    start: { type: String, default: '07:00' },
+    end:   { type: String, default: '09:00' },
+    enabled: { type: Boolean, default: true }
+  },
+  lunch: {
+    start: { type: String, default: '12:00' },
+    end:   { type: String, default: '14:00' },
+    enabled: { type: Boolean, default: true }
+  },
+  dinner: {
+    start: { type: String, default: '19:00' },
+    end:   { type: String, default: '21:00' },
+    enabled: { type: Boolean, default: true }
+  }
+},
+managerOverride: { type: Boolean, default: true },
+
 }, { timestamps: true });
 
 module.exports = mongoose.model('Settings', settingsSchema);

@@ -19,4 +19,7 @@ const messageSchema = new mongoose.Schema({
   isDeleted: { type: Boolean, default: false }
 }, { timestamps: true });
 
+messageSchema.index({ createdAt: -1 });
+messageSchema.index({ isDeleted: 1 });
+
 module.exports = mongoose.model('Message', messageSchema);

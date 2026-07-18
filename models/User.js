@@ -2,9 +2,9 @@ const mongoose = require('mongoose');
 const bcrypt   = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
-  name: { type: String, required: true, trim: true },
-  phone: { type: String, trim: true },
-  email: { type: String, trim: true, lowercase: true },
+  name:     { type: String, required: true, trim: true },
+  phone:    { type: String, trim: true },
+  email:    { type: String, trim: true, lowercase: true },
   password: { type: String, required: true, minlength: 6 },
   role: {
     type: String,
@@ -16,24 +16,22 @@ const userSchema = new mongoose.Schema({
     ref: 'Member',
     default: null
   },
-  avatar:   { type: String, default: '' },
-  isActive: { type: Boolean, default: true },
-  lastSeen: { type: Date, default: Date.now },
-
-  // Password reset এর জন্য
+  avatar:           { type: String, default: '' },
+  isActive:         { type: Boolean, default: true },
+  lastSeen:         { type: Date, default: Date.now },
   securityQuestion: { type: String, default: '' },
   securityAnswer:   { type: String, default: '' },
-
 }, { timestamps: true });
 
-// Password hash করো save করার আগে
+userSchema.index({ phone: 1 }, { unique: true });
+userSchema.index({ role: 1 });
+
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
   this.password = await bcrypt.hash(this.password, 12);
   next();
 });
 
-// Password compare করো
 userSchema.methods.comparePassword = async function(password) {
   return bcrypt.compare(password, this.password);
 };
