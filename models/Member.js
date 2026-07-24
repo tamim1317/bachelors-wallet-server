@@ -6,6 +6,7 @@ const memberSchema = new mongoose.Schema({
     ref: 'Mess',
     default: null
   },
+  photo: { type: String, default: '' },
   name: {
     type: String,
     required: [true, 'নাম দেওয়া আবশ্যক'],

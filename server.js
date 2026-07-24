@@ -1,77 +1,82 @@
-const express  = require('express');
-const mongoose = require('mongoose');
-const cors     = require('cors');
-const helmet   = require('helmet');
-const rateLimit = require('express-rate-limit');
+const express       = require('express');
+const mongoose      = require('mongoose');
+const cors          = require('cors');
+const helmet        = require('helmet');
+const rateLimit     = require('express-rate-limit');
 const mongoSanitize = require('express-mongo-sanitize');
-const xss      = require('xss-clean');
-const http     = require('http');
-const { Server } = require('socket.io');
+const http          = require('http');
+const { Server }    = require('socket.io');
 require('dotenv').config();
 
 const app    = express();
 const server = http.createServer(app);
-const io     = new Server(server, {
+
+// ── Allowed Origins ──────────────────────────────────────────
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'http://localhost:5000',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:5173',
+  process.env.CLIENT_URL,
+].filter(Boolean);
+
+// ── Socket.io ────────────────────────────────────────────────
+const io = new Server(server, {
   cors: {
-    origin:  process.env.CLIENT_URL || '*',
-    methods: ['GET', 'POST']
+    origin:      allowedOrigins,
+    methods:     ['GET', 'POST'],
+    credentials: true,
   }
 });
 
 // ── Security Middleware ──────────────────────────────────────
-// 1. Helmet — HTTP security headers
+
+// 1. Helmet
 app.use(helmet({
   crossOriginEmbedderPolicy: false,
-  contentSecurityPolicy: false,
+  contentSecurityPolicy:     false,
 }));
 
-// 2. CORS — শুধু allowed origins থেকে request
-const allowedOrigins = [
-  'http://localhost:3000',
-  'http://localhost:5173',
-  process.env.CLIENT_URL,
-].filter(Boolean);
-
+// 2. CORS
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('CORS policy violation'));
-    }
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    // In development allow all
+    if (process.env.NODE_ENV !== 'production') return callback(null, true);
+    callback(new Error('CORS policy violation'));
   },
   credentials: true,
 }));
 
-// 3. Body parser
-app.use(express.json({ limit: '10kb' })); // 10kb limit — large body attack থেকে রক্ষা
+// 3. Body parser — JSON only, 10kb limit
+app.use(express.json({ limit: '10kb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' })); // multipart/form-data এর জন্য
 
 // 4. NoSQL injection protection
 app.use(mongoSanitize());
 
-// 5. XSS protection
-app.use(xss());
-
 // ── Rate Limiting ────────────────────────────────────────────
-// General API rate limit
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max:      100,             // 100 requests per window
+  windowMs: 15 * 60 * 1000,
+  max:      200,
   message:  { success: false, message: 'অনেক বেশি request! ১৫ মিনিট পর আবার চেষ্টা করুন।' },
   standardHeaders: true,
-  legacyHeaders: false,
+  legacyHeaders:   false,
+  skip: (req) => process.env.NODE_ENV !== 'production', // dev তে skip
 });
 
-// Auth endpoints এ strict rate limit
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max:      10,              // শুধু 10 login attempt
+  windowMs: 15 * 60 * 1000,
+  max:      20,
   message:  { success: false, message: 'অনেক বেশি login attempt! ১৫ মিনিট পর আবার চেষ্টা করুন।' },
   skipSuccessfulRequests: true,
+  skip: (req) => process.env.NODE_ENV !== 'production',
 });
 
-// Apply rate limits
-app.use('/api/', apiLimiter);
+app.use('/api/',              apiLimiter);
 app.use('/api/auth/login',    authLimiter);
 app.use('/api/auth/register', authLimiter);
 
@@ -97,31 +102,32 @@ app.use('/api/insights',   require('./routes/insightsRoutes'));
 app.get('/', (req, res) => res.json({
   message: '🎓 Bachelor Wallet API Running!',
   version: '2.0',
-  status:  'healthy'
+  status:  'healthy',
+  env:     process.env.NODE_ENV || 'development',
 }));
 
 // ── Global Error Handler ─────────────────────────────────────
 app.use((err, req, res, next) => {
-  // CORS error
   if (err.message === 'CORS policy violation') {
     return res.status(403).json({ success: false, message: 'Not allowed by CORS' });
   }
-  // Mongoose validation error
   if (err.name === 'ValidationError') {
     const messages = Object.values(err.errors).map(e => e.message);
     return res.status(400).json({ success: false, message: messages[0] });
   }
-  // JWT error
   if (err.name === 'JsonWebTokenError') {
     return res.status(401).json({ success: false, message: 'Invalid token' });
   }
-  // Default
-  console.error('Server error:', err);
+  if (err.name === 'TokenExpiredError') {
+    return res.status(401).json({ success: false, message: 'Token expired' });
+  }
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(400).json({ success: false, message: 'File অনেক বড়! ২MB এর কম হতে হবে' });
+  }
+  console.error('Server error:', err.message);
   res.status(err.status || 500).json({
     success: false,
-    message: process.env.NODE_ENV === 'production'
-      ? 'Server error হয়েছে'
-      : err.message
+    message: process.env.NODE_ENV === 'production' ? 'Server error হয়েছে' : err.message
   });
 });
 
@@ -130,7 +136,7 @@ app.use((req, res) => {
   res.status(404).json({ success: false, message: 'Route পাওয়া যায়নি' });
 });
 
-// ── Socket.io ────────────────────────────────────────────────
+// ── Socket.io Events ─────────────────────────────────────────
 global.io = io;
 const onlineUsers = new Map();
 
@@ -173,7 +179,8 @@ mongoose.connect(process.env.MONGODB_URI)
     console.log('✅ MongoDB connected');
     server.listen(process.env.PORT || 5000, () => {
       console.log(`🚀 Server running on port ${process.env.PORT || 5000}`);
-      console.log(`🛡️  Security: Helmet, CORS, Rate Limit, XSS, NoSQL Injection protection active`);
+      console.log(`🛡️  Security: Helmet, CORS, Rate Limit, NoSQL Injection protection active`);
+      console.log(`🌍 Allowed origins: ${allowedOrigins.join(', ')}`);
     });
   })
   .catch(err => console.error('❌ MongoDB error:', err));
